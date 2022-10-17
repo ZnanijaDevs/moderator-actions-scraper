@@ -21,13 +21,17 @@ func main() {
 			offsetPage < 1 || 
 			offsetPage > 1_000_000 ||
 			userIds == nil) {
-			ctx.AbortWithStatusJSON(400, "invalid request")
+			ctx.AbortWithStatusJSON(400, gin.H{"error": "invalid request"})
 			return
 		}
 
-		actions, _ := GetActions(userIds, limit, offsetPage)
+		actions, errors := GetActions(userIds, limit, offsetPage)
 
-		ctx.JSON(200, actions)
+		ctx.JSON(200, gin.H{
+			"actions": actions,
+			"errors": errors,
+			"count": len(actions),
+		})
 	})
 
 	router.Run()

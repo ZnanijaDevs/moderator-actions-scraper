@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -44,24 +42,4 @@ func Trim(s string) string {
 // Replace the matched pattern in a string with a replacement
 func ReplaceInText(regex string, src string, replacement string) string {
 	return regexp.MustCompile(regex).ReplaceAllString(src, replacement)
-}
-
-func ExtractUserIdsFromQuery(query string) ([]string, error) {
-	chunks := strings.Split(query, ",")
-
-	var slice []string
-	for _, chunk := range chunks {
-		i, err := strconv.Atoi(chunk)
-		if err != nil {
-			return nil, err
-		}
-
-		if i < 0 || i > math.MaxInt32 {
-			return nil, fmt.Errorf("invalid number: %d", i)
-		}
-
-		slice = append(slice, chunk)
-	}
-
-	return slice, nil
 }

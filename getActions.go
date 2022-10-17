@@ -2,16 +2,30 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
 	"github.com/gocolly/colly"
 )
 
-func GetActions(userIds []string, limit int, offsetPage int) ([]Action, error) {
+func GetActions(userIds []string, limit int, offsetPage int) (a []Action, errors []string) {
 	actions := []Action{}
+	fetchErrors := []string{}
 
 	s := GetScraper()
+	s.OnResponse(func(r *colly.Response) {
+		if (r.StatusCode == http.StatusOK) {
+			fmt.Println(fmt.Sprintf("success -> %s", r.Request.URL.Path))
+			return
+		}
+
+		userId := r.Request.URL.Query().Get("_userId")
+
+		fetchErrors = append(fetchErrors, 
+			fmt.Sprintf("request failed with status %d (user id: %s)", r.StatusCode, userId))
+	})
+
 	s.OnHTML(".activities tr", func(collyElem *colly.HTMLElement) {
 		var action Action
 		var elem = *collyElem.DOM
@@ -81,12 +95,10 @@ func GetActions(userIds []string, limit int, offsetPage int) ([]Action, error) {
 			limit,
 		)
 
-		fmt.Println(fmt.Sprintf("fetching %s", url))
-
 		s.Visit(url)
 	}
 
 	s.Wait()
 
-	return actions, nil
+	return actions, fetchErrors
 }
