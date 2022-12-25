@@ -9,21 +9,27 @@ import (
 	"github.com/gocolly/colly"
 )
 
-func GetActions(userIds []string, limit int, offsetPage int) (a []Action, errors []string) {
+func GetActions(
+	userId int, 
+	limit int, 
+	offsetPage int,
+	authToken string,
+) (a []Action, errors []string) {
 	actions := []Action{}
 	fetchErrors := []string{}
 
-	s := GetScraper()
+	s := GetScraper(authToken)
 	s.OnResponse(func(r *colly.Response) {
-		if (r.StatusCode == http.StatusOK) {
-			fmt.Println(fmt.Sprintf("success -> %s", r.Request.URL.Path))
+		if (strings.Contains(r.Request.URL.Path, "login")) {
+			fetchErrors = append(fetchErrors, "invalid auth")
 			return
 		}
 
-		userId := r.Request.URL.Query().Get("_userId")
-
-		fetchErrors = append(fetchErrors, 
-			fmt.Sprintf("request failed with status %d (user id: %s)", r.StatusCode, userId))
+		if (r.StatusCode == http.StatusOK) {
+			fmt.Println(fmt.Sprintf("success -> %s", r.Request.URL.Path))
+		} else {
+			fetchErrors = append(fetchErrors, fmt.Sprintf("request failed with status %d", r.StatusCode))
+		}
 	})
 
 	s.OnHTML(".activities tr", func(collyElem *colly.HTMLElement) {
@@ -58,6 +64,7 @@ func GetActions(userIds []string, limit int, offsetPage int) (a []Action, errors
 
 			action.Reason = Trim(reason)
 			action.DeletionReason = GetShortDeleteReason(reason)
+			action.Attachments = FindAllMatchesInText("https:/{2}ru-static.z-dn.net[/.a-z0-9/]+", reason)
 		}
 
 		reasonSel := elem.Find(".reason").Text()
@@ -86,18 +93,15 @@ func GetActions(userIds []string, limit int, offsetPage int) (a []Action, errors
 		actions = append(actions, action)
 	})
 
-	for _, userId := range userIds {
-		url := fmt.Sprintf(
-			"%s/moderation_new/view_moderator/%[2]s?_userId=%[2]s&page=%d&limit=%d",
-			os.Getenv("BRAINLY_PROXY_HOST"),
-			userId,
-			offsetPage,
-			limit,
-		)
+	url := fmt.Sprintf(
+		"%s/moderation_new/view_moderator/%[2]d?_userId=%[2]d&page=%d&limit=%d",
+		os.Getenv("BRAINLY_PROXY_HOST"),
+		userId,
+		offsetPage,
+		limit,
+	)
 
-		s.Visit(url)
-	}
-
+	s.Visit(url)
 	s.Wait()
 
 	return actions, fetchErrors

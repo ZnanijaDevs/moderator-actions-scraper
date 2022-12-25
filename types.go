@@ -25,4 +25,5 @@ type Action struct {
 	Reason         string         `json:"reason"`
 	ModeratorID    int            `json:"moderatorId"`
 	DeletionReason DeletionReason `json:"deletionReason"`
+	Attachments    []string       `json:"attachments"`
 }
